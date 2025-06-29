@@ -21,14 +21,14 @@ use hyper_util::rt::TokioExecutor;
 
 /// Routes HTTP actions to the main webserver
 pub async fn dev_site_proxy(
-    site_bind_addr: Option<([u8; 4], u16)>,
+    site_bind_addr: Option<SocketAddr>,
     site_forward_prefix: String,
     mut shutdown_rx: async_broadcast::Receiver<()>,
 ) -> anyhow::Result<()> {
     let Some(addr) = site_bind_addr else {
         return Ok(());
     };
-    tracing::info!("Starting dev site proxy at {:?}...", SocketAddr::from(addr));
+    tracing::info!("Starting dev site proxy at {:?}...", addr);
 
     async fn proxy_method(
         State(site_forward_prefix): State<String>,
@@ -63,7 +63,7 @@ pub async fn dev_site_proxy(
         Duration::from_secs(125),
         NoopRouteMapper,
     );
-    let proxy_server = service.serve(addr.into(), async move {
+    let proxy_server = service.serve(addr, async move {
         let _ = shutdown_rx.recv().await;
         tracing::info!("Shut down proxy");
     });

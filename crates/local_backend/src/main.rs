@@ -131,7 +131,7 @@ async fn run_server_inner(runtime: ProdRuntime, config: LocalConfig) -> anyhow::
         Duration::from_secs(125),
         HttpActionRouteMapper,
     );
-    let serve_http_future = http_service.serve(config.http_bind_address().into(), async move {
+    let serve_http_future = http_service.serve(config.http_bind_address(), async move {
         let _ = shutdown_rx_.recv().await;
     });
     let proxy_future = dev_site_proxy(
