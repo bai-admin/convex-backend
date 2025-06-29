@@ -50,4 +50,4 @@ jobs:
             VERGEN_GIT_SHA=${{ github.sha }}
             VERGEN_GIT_COMMIT_TIMESTAMP=${{ env.COMMIT_TIMESTAMP }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max 
+          cache-to: type=gha,mode=max # Trigger workflow recognition
