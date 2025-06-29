@@ -762,13 +762,12 @@ where
         IpAddr::V4(_) => TcpSocket::new_v4()?,
         IpAddr::V6(_) => {
             let socket = TcpSocket::new_v6()?;
-            // Enable dual-stack mode (accept both IPv4 and IPv6)
-            socket.set_ipv6_only(false)?;
+            // IPv6 sockets on Linux default to dual-stack mode (accept both IPv4 and IPv6)
+            // unless explicitly disabled by the system's net.ipv6.bindv6only sysctl
             socket
         }
     };
     socket.set_reuseaddr(true)?;
-    // Set TCP_NODELAY on accepted connections.
     socket.set_nodelay(true)?;
     socket.bind(addr)?;
     let listener = socket.listen(*HTTP_SERVER_TCP_BACKLOG)?;

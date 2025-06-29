@@ -112,8 +112,8 @@ impl ConvexGrpcService {
             IpAddr::V4(_) => TcpSocket::new_v4()?,
             IpAddr::V6(_) => {
                 let socket = TcpSocket::new_v6()?;
-                // Enable dual-stack mode (accept both IPv4 and IPv6)
-                socket.set_ipv6_only(false)?;
+                // IPv6 sockets on Linux default to dual-stack mode (accept both IPv4 and IPv6)
+                // unless explicitly disabled by the system's net.ipv6.bindv6only sysctl
                 socket
             }
         };
