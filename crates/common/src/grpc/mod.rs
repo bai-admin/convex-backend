@@ -1,7 +1,7 @@
 use std::{
     self,
     convert::Infallible,
-    net::SocketAddr,
+    net::{IpAddr, SocketAddr},
     sync::Arc,
 };
 
@@ -91,9 +91,15 @@ impl ConvexGrpcService {
             .layer(sentry_tower::NewSentryLayer::new_from_top())
             .layer(sentry_tower::SentryHttpLayer::with_transaction());
 
+        let protocol = match addr.ip() {
+            IpAddr::V4(_) => "ipv4",
+            IpAddr::V6(_) => "ipv6",
+        };
         tracing::info!(
-            "gRPC services {} listening on ipv4://{addr}",
-            self.service_names.join(",")
+            "gRPC services {} listening on {}://{}",
+            self.service_names.join(","),
+            protocol,
+            addr
         );
         for service_name in self.service_names {
             self.health_reporter
@@ -102,7 +108,15 @@ impl ConvexGrpcService {
         }
         // Set SO_REUSEADDR and a bounded TCP accept backlog for our server's listening
         // socket.
-        let socket = TcpSocket::new_v4()?;
+        let socket = match addr.ip() {
+            IpAddr::V4(_) => TcpSocket::new_v4()?,
+            IpAddr::V6(_) => {
+                let socket = TcpSocket::new_v6()?;
+                // Enable dual-stack mode (accept both IPv4 and IPv6)
+                socket.set_ipv6_only(false)?;
+                socket
+            }
+        };
         socket.set_reuseaddr(true)?;
         socket.set_nodelay(true)?;
         socket.bind(addr)?;

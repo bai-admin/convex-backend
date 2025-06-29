@@ -3,7 +3,7 @@ use std::{
     convert::Infallible,
     fmt,
     future::Future,
-    net::SocketAddr,
+    net::{IpAddr, SocketAddr},
     ops::Deref,
     pin::Pin,
     str::{
@@ -668,14 +668,19 @@ impl ConvexHttpService {
         addr: SocketAddr,
         shutdown: F,
     ) -> anyhow::Result<()> {
+        let protocol = match addr.ip() {
+            IpAddr::V4(_) => "ipv4",
+            IpAddr::V6(_) => "ipv6",
+        };
+        tracing::info!("{} listening on {}://{}", self.service_name, protocol, addr);
+        
         let extra = self.meta_routes();
         let mut router = self.router;
         if self.meta_routes_enabled {
             router = router.merge(extra);
         }
-        let make_svc = router.into_make_service_with_connect_info::<SocketAddr>();
-        tracing::info!("{} listening on {addr}", self.service_name);
-        serve_http(make_svc, addr, shutdown).await
+        let make_service = router.into_make_service_with_connect_info::<SocketAddr>();
+        serve_http(make_service, addr, shutdown).await
     }
 
     /// Apply `middleware_fn` to incoming requests *before* passing them to
@@ -753,7 +758,15 @@ where
 {
     // Set SO_REUSEADDR and a bounded TCP accept backlog for our server's listening
     // socket.
-    let socket = TcpSocket::new_v4()?;
+    let socket = match addr.ip() {
+        IpAddr::V4(_) => TcpSocket::new_v4()?,
+        IpAddr::V6(_) => {
+            let socket = TcpSocket::new_v6()?;
+            // Enable dual-stack mode (accept both IPv4 and IPv6)
+            socket.set_ipv6_only(false)?;
+            socket
+        }
+    };
     socket.set_reuseaddr(true)?;
     // Set TCP_NODELAY on accepted connections.
     socket.set_nodelay(true)?;
