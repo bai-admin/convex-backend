@@ -57,7 +57,23 @@ fi
 # --convex-origin and --convex-site are how the backend can be contacted from
 # the outside world. They show up in storage urls, action callbacks, etc.
 
+# Check if user has already specified --interface
+has_interface_arg=false
+for arg in "$@"; do
+  if [[ "$arg" == "--interface" ]]; then
+    has_interface_arg=true
+    break
+  fi
+done
+
+# Default to dual-stack (::) if no interface specified
+INTERFACE_FLAGS=()
+if [ "$has_interface_arg" = false ]; then
+  INTERFACE_FLAGS=(--interface ::)
+fi
+
 exec ./convex-local-backend "$@" \
+    "${INTERFACE_FLAGS[@]}" \
     --instance-name "$INSTANCE_NAME" \
     --instance-secret "$INSTANCE_SECRET" \
     --port 3210 \
